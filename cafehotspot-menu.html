@@ -1055,8 +1055,8 @@
     const waWindow = window.open('', '_blank');
 
     const { data: order, error: fetchError } = await db
-      .from('cafe_orders')
-      .select('id,order_id,customer_name,customer_phone,status')
+      .from('customer_orders')
+      .select('id,customer_name,customer_phone,order_status')
       .eq('id', id)
       .single();
 
