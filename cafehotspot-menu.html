@@ -952,13 +952,13 @@
     const total = getGrandTotal();
 
     // Save the order first so staff can see it on their device.
-    const { error } = await db.from('cafe_orders').insert({
+    const { error } = await db.from('customer_orders').insert({
       order_id: orderId,
       customer_name: name,
       customer_phone: custNumber,
       items: itemsText,
-      total: total,
-      status: 'NEW'
+      total_amount: total,
+      order_status: 'NEW'
     });
 
     if (error) {
