@@ -1016,14 +1016,14 @@
     statusEl.textContent = 'Checking orders...';
 
     // Keep only the last 24 hours.
-    await db.from('cafe_orders').delete().lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    await db.from('customer_orders').delete().lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
     const { data, error } = await db
-      .from('cafe_orders')
-      .select('id,order_id,customer_name,customer_phone,items,total,status,created_at')
-      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-      .neq('status', 'READY')
-      .order('created_at', { ascending: true });
+  .from('customer_orders')
+  .select('id,customer_name,customer_phone,items,total_amount,order_status,created_at')
+  .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+  .neq('order_status', 'READY')
+  .order('created_at', { ascending: true });
 
     if (error) {
       console.error('Staff order load failed:', error);
@@ -1042,12 +1042,12 @@
     list.innerHTML = data.map(order => `
       <div style="border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:10px;background:var(--card);">
         <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
-          <strong style="color:var(--gold);font-size:1.05rem;">${escapeHtml(order.order_id)}</strong>
+          <strong style="color:var(--gold);font-size:1.05rem;">${escapeHtml(order.id)}</strong>
           <span style="font-size:0.75rem;color:var(--subtext);">${new Date(order.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
         </div>
         <div style="margin-top:7px;"><strong>${escapeHtml(order.customer_name)}</strong> • ${escapeHtml(order.customer_phone)}</div>
         <div style="white-space:pre-line;margin-top:8px;color:var(--text);font-size:0.9rem;">${escapeHtml(order.items)}</div>
-        <div style="margin-top:8px;font-weight:700;">Total: ₹${Number(order.total).toFixed(2).replace(/\.00$/, '')}</div>
+        <div style="margin-top:8px;font-weight:700;">Total: ₹${Number(order.total_amount).toFixed(2).replace(/\.00$/, '')}</div>
         <button onclick="markOrderReady(${order.id})" style="width:100%;padding:12px;margin-top:10px;border-radius:9px;border:none;background:#1f9d55;color:white;font-weight:800;font-size:0.95rem;cursor:pointer;">🟢 ORDER READY — WhatsApp Customer</button>
       </div>
     `).join('');
@@ -1080,7 +1080,7 @@
       return;
     }
 
-    const msg = `Hi ${order.customer_name || 'there'}! 🎉 Your order (${order.order_id}) at Café Hotspot is READY for pickup! Please collect it at the counter. Thank you! ☕`;
+    const msg = `Hi ${order.customer_name || 'there'}! 🎉 Your order (${order_id}) at Café Hotspot is READY for pickup! Please collect it at the counter. Thank you! ☕`;
     const url = `https://wa.me/${normalizeWhatsAppNumber(order.customer_phone)}?text=${encodeURIComponent(msg)}`;
     if (waWindow) waWindow.location.href = url;
     else window.open(url, '_blank');
