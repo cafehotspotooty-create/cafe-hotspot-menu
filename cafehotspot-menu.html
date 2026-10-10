@@ -953,13 +953,16 @@
 
     // Save the order first so staff can see it on their device.
     const { error } = await db.from('customer_orders').insert({
-      order_id: orderId,
-      customer_name: name,
-      customer_phone: custNumber,
-      items: itemsText,
-      total_amount: total,
-      order_status: 'NEW'
-    });
+  customer_name: name,
+  customer_phone: custNumber,
+  items: entries.map(([id, item]) => ({
+    name: item.name,
+    qty: item.qty,
+    price: item.price
+  })),
+  total_amount: total,
+  order_status: 'pending'
+});
 
     if (error) {
       console.error('Supabase order save failed:', error);
