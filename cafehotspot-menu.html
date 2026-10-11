@@ -1205,7 +1205,7 @@
 
       const { error: updateError } = await db
         .from('customer_orders')
-        .update({ order_status: 'READY' })
+        .update({ order_status: 'completed' })
         .eq('id', id);
 
       if (updateError) {
