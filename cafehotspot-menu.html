@@ -945,33 +945,47 @@
       return;
     }
 
-    const orderId = generateOrderId() + Math.floor(Math.random() * 90 + 10);
-    const itemsText = entries.map(([id, item]) => `• ${item.name} x${item.qty} - ₹${item.qty * item.price}`).join('\n');
+    const itemsText = entries.map(([id, item]) => `• ${item.name} x${item.qty} - ₹${item.qty * item.price}`).join('
+');
     const subtotal = getTotalPrice();
     const gst = getGST();
     const total = getGrandTotal();
 
-    // Save the order first so staff can see it on their device.
-    const { error } = await db.from('customer_orders').insert({
-  customer_name: name,
-  customer_phone: custNumber,
-  items: entries.map(([id, item]) => ({
-    name: item.name,
-    qty: item.qty,
-    price: item.price
-  })),
-  total_amount: total,
-  order_status: 'pending'
-});
+    // Open synchronously from the click to avoid popup blockers during the database request.
+    const waWindow = window.open('about:blank', '_blank');
 
-    if (error) {
+    // The database trigger assigns the daily order number atomically.
+    const { data: savedOrder, error } = await db.from('customer_orders').insert({
+      customer_name: name,
+      customer_phone: custNumber,
+      items: entries.map(([id, item]) => ({ name: item.name, qty: item.qty, price: item.price })),
+      total_amount: total,
+      order_status: 'pending'
+    }).select('order_no').single();
+
+    if (error || !savedOrder) {
+      if (waWindow) waWindow.close();
       console.error('Supabase order save failed:', error);
       alert('We could not save your order. Please try again.');
       return;
     }
 
-    let msg = `Hi Café Hotspot!\nOrder ID: ${orderId}\nName: ${name}\nMy Number: ${custNumber}\n\nI'd like to order:\n\n${itemsText}\n\nSubtotal: ₹${subtotal.toFixed(2).replace(/\.00$/, '')}\nGST (5%): ₹${gst.toFixed(2).replace(/\.00$/, '')}\nTotal: ₹${total.toFixed(2).replace(/\.00$/, '')}`;
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    const orderNo = savedOrder.order_no;
+    const msg = `Hi Café Hotspot!
+Order ID: ${orderNo}
+Name: ${name}
+My Number: ${custNumber}
+
+I'd like to order:
+
+${itemsText}
+
+Subtotal: ₹${subtotal.toFixed(2).replace(/\.00$/, '')}
+GST (5%): ₹${gst.toFixed(2).replace(/\.00$/, '')}
+Total: ₹${total.toFixed(2).replace(/\.00$/, '')}`;
+    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    if (waWindow) waWindow.location.href = whatsappUrl;
+    else window.location.href = whatsappUrl;
   }
 
   document.addEventListener('DOMContentLoaded', setupAddButtons);
@@ -1144,7 +1158,7 @@
       const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { data, error } = await db
         .from('customer_orders')
-        .select('id,customer_name,customer_phone,items,total_amount,order_status,created_at')
+        .select('id,order_no,customer_name,customer_phone,items,total_amount,order_status,created_at')
         .gte('created_at', cutoff)
         .eq('order_status', 'pending')
         .order('created_at', { ascending: true });
@@ -1166,7 +1180,7 @@
       list.innerHTML = data.map(order => `
         <div style="border:1px solid var(--border);border-radius:12px;padding:13px;margin-bottom:10px;background:var(--card);">
           <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
-            <strong style="color:var(--gold);font-size:1.05rem;">${escapeHtml(order.id)}</strong>
+            <strong style="color:var(--gold);font-size:1.05rem;">${escapeHtml(order.order_no || order.id)}</strong>
             <span style="font-size:0.75rem;color:var(--subtext);">${new Date(order.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
           </div>
           <div style="margin-top:7px;"><strong>${escapeHtml(order.customer_name)}</strong> • ${escapeHtml(order.customer_phone)}</div>
@@ -1192,7 +1206,7 @@
     try {
       const { data: order, error: fetchError } = await db
         .from('customer_orders')
-        .select('id,customer_name,customer_phone,order_status')
+        .select('id,order_no,customer_name,customer_phone,order_status')
         .eq('id', id)
         .single();
 
@@ -1215,7 +1229,7 @@
         return;
       }
 
-      const msg = `Hi ${order.customer_name || 'there'}! 🎉 Your order (${order.id}) at Café Hotspot is READY for pickup! Please collect it at the counter. Thank you! ☕`;
+      const msg = `Hi ${order.customer_name || 'there'}! 🎉 Your order (${order.order_no || order.id}) at Café Hotspot is READY for pickup! Please collect it at the counter. Thank you! ☕`;
       const url = `https://wa.me/${normalizeWhatsAppNumber(order.customer_phone)}?text=${encodeURIComponent(msg)}`;
       if (waWindow) waWindow.location.href = url;
       else window.open(url, '_blank');
