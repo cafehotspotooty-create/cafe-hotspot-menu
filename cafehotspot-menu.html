@@ -945,8 +945,7 @@
       return;
     }
 
-    const itemsText = entries.map(([id, item]) => `• ${item.name} x${item.qty} - ₹${item.qty * item.price}`).join('
-');
+    const itemsText = entries.map(([id, item]) => `• ${item.name} x${item.qty} - ₹${item.qty * item.price}`).join('\n');
     const subtotal = getTotalPrice();
     const gst = getGST();
     const total = getGrandTotal();
