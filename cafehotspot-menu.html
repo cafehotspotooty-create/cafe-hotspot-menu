@@ -982,7 +982,8 @@ ${itemsText}
 Subtotal: ₹${subtotal.toFixed(2).replace(/\.00$/, '')}
 GST (5%): ₹${gst.toFixed(2).replace(/\.00$/, '')}
 Total: ₹${total.toFixed(2).replace(/\.00$/, '')}`;
-    const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+    const whatsappUrl =
+  `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
     if (waWindow) waWindow.location.href = whatsappUrl;
     else window.location.href = whatsappUrl;
   }
